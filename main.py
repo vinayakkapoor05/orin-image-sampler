@@ -14,25 +14,28 @@ logging.basicConfig(
     datefmt='%Y/%m/%d %H:%M:%S')
 
 
-def capture(plugin, stream, out_dir=""):
-    sample_file_name = "sample.jpg"
+def capture(plugin, stream, stream_name, out_dir=""):
+    timestamp = int(time.time() * 1e9)  
+    sample_file_name = f"{timestamp}-sample.jpg"
     
-    with Camera(stream) as camera:
-        for snapshot in camera.stream():
-            sample = snapshot
-            break
+    with Camera(stream) as cam:
+        sample = cam.snapshot()
     
     if out_dir == "":
         sample.save(sample_file_name)
-        meta = {"camera": stream}
+        
+        meta = {
+            "camera": stream_name,
+        }
         plugin.upload_file(sample_file_name, meta=meta)
+        
+        os.remove(sample_file_name)
     else:
         dt = datetime.fromtimestamp(sample.timestamp / 1e9)
-        base_dir = os.path.join(out_dir, dt.astimezone(timezone.utc).strftime('%Y/%m/%d/%H'))
+        base_dir = os.path.join(out_dir, stream, dt.astimezone(timezone.utc).strftime('%Y/%m/%d/%H'))
         os.makedirs(base_dir, exist_ok=True)
         sample_path = os.path.join(base_dir, dt.astimezone(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z.jpg'))
         sample.save(sample_path)
-
 
 def main(args):
     logging.info(f'Starting image sampler for {args.stream}')
